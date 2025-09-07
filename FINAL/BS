@@ -1,1 +1,307 @@
 
+#include <bits/stdc++.h>
+using namespace std;
+
+/* ----------------- Sorting & Binary Search ----------------- */
+
+// Merge Sort
+void merge_vec(vector<int>& a, int l, int m, int r) {
+    int n1 = m - l + 1, n2 = r - m;
+    vector<int> L(a.begin()+l, a.begin()+m+1);
+    vector<int> R(a.begin()+m+1, a.begin()+r+1);
+    int i=0,j=0,k=l;
+    while(i<n1 && j<n2) a[k++] = (L[i] <= R[j]) ? L[i++] : R[j++];
+    while(i<n1) a[k++] = L[i++];
+    while(j<n2) a[k++] = R[j++];
+}
+void merge_sort(vector<int>& a, int l, int r) {
+    if(l>=r) return;
+    int m = l + (r-l)/2;
+    merge_sort(a,l,m);
+    merge_sort(a,m+1,r);
+    merge_vec(a,l,m,r);
+}
+
+// Quick Sort (Lomuto)
+int partition_l(vector<int>& a, int l, int r) {
+    int pivot = a[r];
+    int i = l;
+    for(int j=l;j<r;j++){
+        if(a[j] < pivot) swap(a[i++], a[j]);
+    }
+    swap(a[i], a[r]);
+    return i;
+}
+void quick_sort(vector<int>& a, int l, int r){
+    if(l<r){
+        int p = partition_l(a,l,r);
+        quick_sort(a,l,p-1);
+        quick_sort(a,p+1,r);
+    }
+}
+
+// Binary search (lower_bound style)
+int binary_search_idx(const vector<int>& a, int x){
+    int l=0, r=(int)a.size()-1;
+    while(l<=r){
+        int m = l + (r-l)/2;
+        if(a[m]==x) return m;
+        if(a[m]<x) l = m+1; else r = m-1;
+    }
+    return -1; // not found
+}
+
+/* ----------------- Kadane (max subarray) ----------------- */
+long long kadane(const vector<int>& a){
+    long long best = LLONG_MIN, cur = 0;
+    for(int x: a){
+        cur = max<long long>(x, cur + x);
+        best = max(best, cur);
+    }
+    return best;
+}
+
+/* ----------------- Linked List (Singly) ----------------- */
+struct ListNode {
+    int val;
+    ListNode* next;
+    ListNode(int v=0): val(v), next(nullptr) {}
+};
+ListNode* build_list(const vector<int>& v){
+    ListNode dummy;
+    ListNode* tail = &dummy;
+    for(int x: v){ tail->next = new ListNode(x); tail = tail->next; }
+    return dummy.next;
+}
+void print_list(ListNode* head){
+    while(head){ cout<<head->val; if(head->next) cout<<" -> "; head=head->next; }
+    cout<<"\n";
+}
+ListNode* reverse_list(ListNode* head){
+    ListNode* prev = nullptr;
+    while(head){
+        ListNode* nxt = head->next;
+        head->next = prev;
+        prev = head;
+        head = nxt;
+    }
+    return prev;
+}
+
+/* ----------------- Binary Search Tree (BST) ----------------- */
+struct BST {
+    struct Node {
+        int val;
+        Node* left; Node* right;
+        Node(int v): val(v), left(nullptr), right(nullptr) {}
+    };
+    Node* root = nullptr;
+    void insert(int x){
+        Node** cur = &root;
+        while(*cur){
+            if(x < (*cur)->val) cur = &((*cur)->left);
+            else cur = &((*cur)->right);
+        }
+        *cur = new Node(x);
+    }
+    bool find(int x){
+        Node* cur = root;
+        while(cur){
+            if(cur->val == x) return true;
+            if(x < cur->val) cur = cur->left; else cur = cur->right;
+        }
+        return false;
+    }
+    void inorder(Node* node){
+        if(!node) return;
+        inorder(node->left);
+        cout<<node->val<<" ";
+        inorder(node->right);
+    }
+};
+
+/* ----------------- Disjoint Set Union (Union-Find) ----------------- */
+struct DSU {
+    int n;
+    vector<int> p, r;
+    DSU(int n=0): n(n), p(n+1), r(n+1,0) { iota(p.begin(), p.end(), 0); }
+    int find(int x){ return p[x]==x?x:p[x]=find(p[x]); }
+    bool unite(int a,int b){
+        a=find(a); b=find(b);
+        if(a==b) return false;
+        if(r[a]<r[b]) swap(a,b);
+        p[b]=a;
+        if(r[a]==r[b]) r[a]++;
+        return true;
+    }
+};
+
+/* ----------------- Graph: BFS, DFS, Dijkstra ----------------- */
+struct Graph {
+    int n;
+    vector<vector<pair<int,int>>> adj; // (to, weight)
+    Graph(int n=0): n(n), adj(n) {}
+    void add_edge(int u,int v,int w=1){
+        adj[u].push_back({v,w});
+    }
+    vector<int> bfs(int s){
+        vector<int> dist(n,-1);
+        queue<int> q;
+        dist[s]=0; q.push(s);
+        while(!q.empty()){
+            int u=q.front(); q.pop();
+            for(auto [v,w]: adj[u]){
+                if(dist[v]==-1){
+                    dist[v]=dist[u]+1;
+                    q.push(v);
+                }
+            }
+        }
+        return dist;
+    }
+    void dfs_util(int u, vector<int>& vis, vector<int>& order){
+        vis[u]=1;
+        for(auto [v,w]: adj[u]) if(!vis[v]) dfs_util(v,vis,order);
+        order.push_back(u);
+    }
+    vector<int> dfs_all(){
+        vector<int> vis(n,0), order;
+        for(int i=0;i<n;i++) if(!vis[i]) dfs_util(i,vis,order);
+        reverse(order.begin(), order.end());
+        return order;
+    }
+    // Dijkstra from s (0-indexed)
+    vector<long long> dijkstra(int s){
+        const long long INF = (1LL<<60);
+        vector<long long> dist(n, INF);
+        priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<>> pq;
+        dist[s]=0; pq.push({0,s});
+        while(!pq.empty()){
+            auto [d,u] = pq.top(); pq.pop();
+            if(d!=dist[u]) continue;
+            for(auto [v,w] : adj[u]){
+                if(dist[v] > d + w){
+                    dist[v] = d + w;
+                    pq.push({dist[v], v});
+                }
+            }
+        }
+        return dist;
+    }
+};
+
+/* ----------------- Fenwick Tree (BIT) for prefix sums ----------------- */
+struct Fenwick {
+    int n;
+    vector<long long> bit;
+    Fenwick(int n=0): n(n), bit(n+1,0) {}
+    void add(int idx, long long val){
+        for(; idx<=n; idx += idx & -idx) bit[idx] += val;
+    }
+    long long sumPrefix(int idx){
+        long long r=0;
+        for(; idx>0; idx -= idx & -idx) r += bit[idx];
+        return r;
+    }
+    long long rangeSum(int l, int r){
+        return sumPrefix(r) - sumPrefix(l-1);
+    }
+};
+
+/* ----------------- Segment Tree (Range sum, point update) ----------------- */
+struct SegmentTree {
+    int n;
+    vector<long long> st;
+    SegmentTree(const vector<int>& a){
+        n = a.size();
+        st.assign(4*n,0);
+        function<void(int,int,int)> build = [&](int p,int l,int r){
+            if(l==r){ st[p]=a[l]; return; }
+            int m=(l+r)/2;
+            build(p*2,l,m); build(p*2+1,m+1,r);
+            st[p] = st[p*2] + st[p*2+1];
+        };
+        if(n) build(1,0,n-1);
+    }
+    long long query(int i,int j){ // inclusive
+        function<long long(int,int,int,int,int)> q = [&](int p,int l,int r,int i,int j)->long long{
+            if(i>r || j<l) return 0;
+            if(i<=l && r<=j) return st[p];
+            int m=(l+r)/2;
+            return q(p*2,l,m,i,j) + q(p*2+1,m+1,r,i,j);
+        };
+        return q(1,0,n-1,i,j);
+    }
+    void update(int idx, int val){
+        function<void(int,int,int)> u = [&](int p,int l,int r){
+            if(l==r){ st[p]=val; return; }
+            int m=(l+r)/2;
+            if(idx<=m) u(p*2,l,m); else u(p*2+1,m+1,r);
+            st[p] = st[p*2] + st[p*2+1];
+        };
+        u(1,0,n-1);
+    }
+};
+
+/* ----------------- Example usages in main ----------------- */
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    cout<<"=== Sorting example ===\n";
+    vector<int> a = {5,2,9,1,5,6};
+    merge_sort(a,0,(int)a.size()-1);
+    for(int x: a) cout<<x<<" "; cout<<"\n";
+
+    cout<<"\n=== Binary search ===\n";
+    int idx = binary_search_idx(a,5);
+    cout<<"Index of 5 in sorted array: "<<idx<<"\n";
+
+    cout<<"\n=== Kadane ===\n";
+    vector<int> arr = {-2,1,-3,4,-1,2,1,-5,4};
+    cout<<"Max subarray sum: "<<kadane(arr)<<"\n";
+
+    cout<<"\n=== Linked list ===\n";
+    ListNode* head = build_list({1,2,3,4});
+    print_list(head);
+    head = reverse_list(head);
+    print_list(head);
+
+    cout<<"\n=== BST ===\n";
+    BST tree;
+    for(int x: {5,3,7,2,4,6,8}) tree.insert(x);
+    cout<<"Find 4? "<<tree.find(4)<<"\n";
+    cout<<"Inorder: "; tree.inorder(tree.root); cout<<"\n";
+
+    cout<<"\n=== DSU ===\n";
+    DSU dsu(6);
+    dsu.unite(1,2); dsu.unite(2,3); dsu.unite(4,5);
+    cout<<"find(3) root: "<<dsu.find(3)<<"\n"; // same as find(1)
+
+    cout<<"\n=== Graph (BFS/DFS/Dijkstra) ===\n";
+    Graph g(6);
+    g.add_edge(0,1,4); g.add_edge(0,2,1); g.add_edge(2,1,2);
+    g.add_edge(1,3,1); g.add_edge(2,3,5); g.add_edge(3,4,3);
+    auto dist = g.dijkstra(0);
+    cout<<"Dijkstra distances from 0: ";
+    for(long long d: dist) { if(d==(1LL<<60)) cout<<"INF "; else cout<<d<<" "; } cout<<"\n";
+    auto bfsd = g.bfs(0);
+    cout<<"BFS levels from 0: ";
+    for(int x: bfsd) cout<<x<<" "; cout<<"\n";
+
+    cout<<"\n=== Fenwick ===\n";
+    Fenwick bit(5);
+    for(int i=1;i<=5;i++) bit.add(i,i); // add value i at index i
+    cout<<"Sum 1..5: "<<bit.sumPrefix(5)<<"\n";
+    cout<<"Range 2..4: "<<bit.rangeSum(2,4)<<"\n";
+
+    cout<<"\n=== Segment Tree ===\n";
+    vector<int> base = {1,2,3,4,5};
+    SegmentTree st(base);
+    cout<<"Range sum 1..3: "<<st.query(1,3)<<"\n";
+    st.update(2,10); // a[2]=10
+    cout<<"Range sum 1..3 after update: "<<st.query(1,3)<<"\n";
+
+    cout<<"\n=== DS Examples Completed ===\n";
+    return 0;
+}
